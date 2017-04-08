@@ -9,16 +9,16 @@ import (
 )
 
 type DummyProducer struct {
+	queueSize int
 }
 
-func (p DummyProducer) Produce(jobs chan Job, done chan int) {
-	numQueued := 10
-	for i := 0; i < numQueued; i++ {
+func (p DummyProducer) Produce(jobs chan Job) int {
+	for i := 0; i < p.queueSize; i++ {
 		job := SleepyJob{id: i}
 		jobs <- job
 	}
 	log.Printf("Done queuing jobs\n")
-	done <- numQueued
+	return p.queueSize
 }
 
 // Implement Job and Result
@@ -48,9 +48,8 @@ func (job SleepyJob) Work(results chan Result) {
 
 func Example() {
 	producer := DummyProducer{}
-	consumer := SimpleConsumer{}
 
-	results := ProduceConsume(producer, consumer)
+	results := ProduceConsume(producer)
 	for _, result := range results {
 		switch value := result.Get().(type) {
 		case int:
@@ -60,13 +59,14 @@ func Example() {
 }
 
 func TestProduceConsumer(t *testing.T) {
-	producer := DummyProducer{}
-	consumer := SimpleConsumer{}
+	queueSize := 100
 
-	results := ProduceConsume(producer, consumer)
+	producer := DummyProducer{queueSize: queueSize}
 
-	if len(results) != 10 {
-		t.Error("Was expecting 10 results")
+	results := ProduceConsume(producer)
+
+	if len(results) != queueSize {
+		t.Errorf("Was expecting %d results\n", queueSize)
 	}
 	for _, result := range results {
 		switch value := result.Get().(type) {

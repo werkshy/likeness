@@ -1,6 +1,9 @@
 package worker
 
-import "log"
+import (
+	"log"
+	"runtime"
+)
 
 type Result interface {
 	Success() bool
@@ -12,25 +15,23 @@ type Job interface {
 }
 
 type Producer interface {
-	Produce(jobs chan Job, done chan int)
+	Produce(jobs chan Job) int
 }
 
-type Consumer interface {
-	Consume(jobs chan Job, results chan Result)
-}
+func ProduceConsume(producer Producer) (results []Result) {
+	numWorkers := runtime.NumCPU()
 
-func ProduceConsume(producer Producer, consumer Consumer) (results []Result) {
-	var bufferSize = 1000
+	var bufferSize = 100000
 	var jobs = make(chan Job, bufferSize)
-	var doneProducing = make(chan int)
 	var resultsChan = make(chan Result, bufferSize)
 
-	go producer.Produce(jobs, doneProducing)
+	for i := 0; i < numWorkers; i++ {
+		go consume(jobs, resultsChan)
+	}
 
-	go consumer.Consume(jobs, resultsChan)
-
-	numQueued := <-doneProducing
-	log.Printf("Queuing complete\n")
+	numQueued := producer.Produce(jobs)
+	close(jobs)
+	log.Printf("Queuing complete (%d)\n", numQueued)
 
 	for i := 0; i < numQueued; i++ {
 		result := <-resultsChan
@@ -39,4 +40,10 @@ func ProduceConsume(producer Producer, consumer Consumer) (results []Result) {
 	log.Printf("%d workers complete\n", numQueued)
 
 	return results
+}
+
+func consume(jobs chan Job, results chan Result) {
+	for job := range jobs {
+		job.Work(results)
+	}
 }
