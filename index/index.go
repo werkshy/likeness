@@ -1,10 +1,11 @@
 package index
 
 import (
-	"crypto/rand"
+	"crypto/md5"
+	"fmt"
+	"io"
 	"log"
-	"math/big"
-	"time"
+	"os"
 
 	"github.com/werkshy/likeness/worker"
 )
@@ -13,57 +14,61 @@ import (
 func StartIndex(mainDir string) (e error) {
 	//log.Printf("Starting index of %s\n", mainDir)
 
-	producer := TreeWalkingProducer{root: "/music"}
-	consumer := worker.SimpleConsumer{}
+	producer := worker.TreeWalkingProducer{
+		Root:       mainDir,
+		JobBuilder: newFileImportJob,
+		PathFilter: worker.FileFilter,
+	}
 
-	results := worker.ProduceConsume(producer, consumer)
+	results := worker.ProduceConsume(producer)
 	for _, result := range results {
 		switch value := result.Get().(type) {
-		//default:
-		//	log.Printf("Unexpected type %T\n", value)
-		case int:
-			log.Printf("Job %d success = %t\n", value, result.Success())
+		case FileImportJob:
+			log.Printf("path: %s; hash: %s\n", value.path, value.md5)
 		}
 	}
 
 	return e
 }
 
-type TreeWalkingProducer struct {
-	root string
-}
-
-func (p TreeWalkingProducer) Produce(jobs chan worker.Job, done chan int) {
-	numQueued := 10
-	for i := 0; i < numQueued; i++ {
-		job := SleepyJob{id: i}
-		jobs <- job
-	}
-	log.Printf("Done queuing jobs\n")
-	done <- numQueued
+func newFileImportJob(path string, info os.FileInfo, i int) worker.Job {
+	return &FileImportJob{id: i, path: path}
 }
 
 // Implement Job and Result
-type SleepyJob struct {
+type FileImportJob struct {
 	id      int
+	path    string
+	md5     string
 	success bool
 }
 
-func (job SleepyJob) Success() bool {
-	return job.success
+func (result FileImportJob) Success() bool {
+	return result.success
 }
 
-func (job SleepyJob) Get() interface{} {
-	return job.id
+func (result FileImportJob) Get() interface{} {
+	return result
 }
 
-func (job SleepyJob) Work(results chan worker.Result) {
-	var random, _ = rand.Int(rand.Reader, big.NewInt(1000))
-	var sleepTime = random.Int64()
-	log.Printf("Starting job %d, delay = %d\n", job.id, sleepTime)
-	time.Sleep(time.Duration(sleepTime) * time.Millisecond)
-
-	job.success = true
-	log.Printf("Finished job %d\n", job.id)
+func (job *FileImportJob) Work(results chan worker.Result) {
+	job.md5 = fileHash(job.path)
+	log.Printf("Finished %s\n", job.path)
 	results <- job
+}
+
+func fileHash(path string) string {
+	log.Printf("Hashing %s\n", path)
+	f, err := os.Open(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+
+	hash := md5.New()
+	if _, err := io.Copy(hash, f); err != nil {
+		log.Fatal(err)
+	}
+
+	return fmt.Sprintf("%x", hash.Sum(nil))
 }
