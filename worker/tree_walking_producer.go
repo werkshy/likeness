@@ -48,7 +48,7 @@ func (p TreeWalkingProducer) Produce(jobs chan Job) int {
 
 func (p TreeWalkingProducer) shouldQueue(result visitResult) bool {
 	if p.PathFilter == nil {
-		return false
+		return true
 	}
 	return p.PathFilter(result.path, result.info)
 }
