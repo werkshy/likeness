@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/werkshy/likeness/index"
+	"github.com/werkshy/likeness/schema"
 )
 
 // Global config variables
@@ -19,8 +20,7 @@ func usage() {
 func main() {
 	flag.StringVar(&mainDir, "main-dir", "/data/delete_me/photos", "Main Photo Directory")
 
-	//var dbHost = flag.String("db-host", "localhost", "Postgres DB Hostname")
-	// TODO: add port, user, pass
+	var dbUrl = flag.String("db-url", "postgres://localhost:5432/likeness", "Postgres DB Url")
 	//var thumbDir = flag.String("thumb-dir", "/.thumbs", "Relative Path of Thumbnail storage")
 
 	// TODO: add http server flags
@@ -33,6 +33,8 @@ func main() {
 	switch command {
 	case "index":
 		index.StartIndex(mainDir)
+	case "migrate":
+		schema.Migrate(dbUrl)
 	default:
 		log.Fatalf("Unknown command: '%s'\n", command)
 	}
