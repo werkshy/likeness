@@ -1,74 +1,45 @@
 package index
 
-import (
-	"crypto/md5"
-	"fmt"
-	"io"
-	"log"
-	"os"
+// Index: go through the main photo dir and make sure we know all of the files
+// within.
+// Print out a list of duplicates
 
+import (
+	"fmt"
+	"log"
+
+	"github.com/jmoiron/sqlx"
 	"github.com/werkshy/likeness/worker"
 )
 
 // StartIndex kicks off an index job. Will wait until it finishes.
-func StartIndex(mainDir string) (e error) {
+func StartIndex(mainDir string, db *sqlx.DB) (e error) {
 	//log.Printf("Starting index of %s\n", mainDir)
+	store := NewDbStore(db)
 
 	producer := worker.TreeWalkingProducer{
 		Root:       mainDir,
-		JobBuilder: newFileImportJob,
+		JobBuilder: mkNewFileIndexJob(store),
 		PathFilter: worker.FileFilter,
 	}
 
 	results := worker.ProduceConsume(producer)
+	var duplicates []FileIndexJob
+
 	for _, result := range results {
-		switch value := result.Get().(type) {
-		case FileImportJob:
-			log.Printf("path: %s; hash: %s\n", value.path, value.md5)
+		switch job := result.Get().(type) {
+		case FileIndexJob:
+			log.Printf("path: %s; hash: %s isDupe: %t\n", job.path, job.GetMd5(), job.isDupe())
+			if job.Success() && job.isDupe() {
+				duplicates = append(duplicates, job)
+			}
 		}
 	}
 
+	for _, job := range duplicates {
+		fmt.Printf("%s is a duplicate of %s\n", job.path, job.duplicatePhoto.Path)
+	}
+	fmt.Printf("Found %d dupes\n", len(duplicates))
+
 	return e
-}
-
-func newFileImportJob(path string, info os.FileInfo, i int) worker.Job {
-	return &FileImportJob{id: i, path: path}
-}
-
-// Implement Job and Result
-type FileImportJob struct {
-	id      int
-	path    string
-	md5     string
-	success bool
-}
-
-func (result FileImportJob) Success() bool {
-	return result.success
-}
-
-func (result FileImportJob) Get() interface{} {
-	return result
-}
-
-func (job *FileImportJob) Work(results chan worker.Result) {
-	job.md5 = fileHash(job.path)
-	log.Printf("Finished %s\n", job.path)
-	results <- job
-}
-
-func fileHash(path string) string {
-	log.Printf("Hashing %s\n", path)
-	f, err := os.Open(path)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
-
-	hash := md5.New()
-	if _, err := io.Copy(hash, f); err != nil {
-		log.Fatal(err)
-	}
-
-	return fmt.Sprintf("%x", hash.Sum(nil))
 }

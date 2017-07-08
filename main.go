@@ -5,6 +5,10 @@ import (
 	"log"
 	"os"
 
+	"github.com/jmoiron/sqlx"
+
+	_ "github.com/lib/pq"
+
 	"github.com/werkshy/likeness/index"
 	"github.com/werkshy/likeness/schema"
 )
@@ -18,7 +22,8 @@ func usage() {
 }
 
 func main() {
-	flag.StringVar(&mainDir, "main-dir", "/data/delete_me/photos", "Main Photo Directory")
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	flag.StringVar(&mainDir, "main-dir", "/home/oneill/test-photos", "Main Photo Directory")
 
 	var dbUrl = flag.String("db-url", "postgres://localhost:5432/likeness", "Postgres DB Url")
 	//var thumbDir = flag.String("thumb-dir", "/.thumbs", "Relative Path of Thumbnail storage")
@@ -30,11 +35,13 @@ func main() {
 
 	checkConfig(mainDir)
 
+	db := sqlx.MustConnect("postgres", *dbUrl)
+
 	switch command {
 	case "index":
-		index.StartIndex(mainDir)
+		index.StartIndex(mainDir, db)
 	case "migrate":
-		schema.Migrate(dbUrl)
+		schema.Migrate(db)
 	default:
 		log.Fatalf("Unknown command: '%s'\n", command)
 	}
