@@ -6,6 +6,7 @@ import (
 	"log"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/mattes/migrate"
@@ -20,6 +21,7 @@ var (
 )
 
 func Migrate(db *sqlx.DB) {
+	start := time.Now()
 	checkPostgresVersion(db)
 	migrator := newMigrator(db.DB)
 	version, dirty, err := migrator.Version()
@@ -35,8 +37,9 @@ func Migrate(db *sqlx.DB) {
 	if err != nil {
 		log.Fatal(err)
 	} else {
-		log.Printf("Current DB version: %d\n", version)
+		log.Printf("Current schema version: %d\n", version)
 	}
+	log.Printf("Migration check took %s\n", time.Since(start))
 }
 
 // TODO make a Rollback method
