@@ -12,8 +12,10 @@ TODO
     - [x] Detect conflicts / dupes
     - [x] Convert to sqlx
     - [x] Print list of duplicate files
-    - [ ] File date
-    - [ ] exif date & camera model / id
+    - [x] File date
+    - [x] exif date
+    - [x] mp4 date
+    - [ ] .MOV date
 - [ ] Handle dupes (VERY careful deletion..)
       - which one to delete? There's one that's not in the DB. Should we assume that whatever we are indexing is somewhat reasonably laid out?
       - Should we add '--delete-dupes' and '--move-existing' config options for 'index' command?
