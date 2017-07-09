@@ -36,12 +36,11 @@ func main() {
 	checkConfig(mainDir)
 
 	db := sqlx.MustConnect("postgres", *dbUrl)
+	schema.Migrate(db)
 
 	switch command {
 	case "index":
 		index.StartIndex(mainDir, db)
-	case "migrate":
-		schema.Migrate(db)
 	default:
 		log.Fatalf("Unknown command: '%s'\n", command)
 	}
