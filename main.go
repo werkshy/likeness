@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 
@@ -17,6 +18,10 @@ import (
 var mainDir string
 
 func usage() {
+	fmt.Println("Usage: likeness COMMAND [ARGS]")
+	fmt.Println("COMMAND is one of:")
+	fmt.Println("  index: index existing photo dir")
+	fmt.Println("ARGS and their default values:")
 	flag.PrintDefaults()
 	os.Exit(2)
 }
@@ -31,6 +36,12 @@ func main() {
 	// TODO: add http server flags
 	flag.Parse()
 
+	// Verify that a subcommand has been provided
+	// os.Arg[0] is the main command
+	// os.Arg[1] will be the subcommand
+	if len(os.Args) < 2 {
+		usage()
+	}
 	var command = os.ExpandEnv(flag.Arg(0))
 
 	checkConfig(mainDir)
