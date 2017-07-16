@@ -29,8 +29,8 @@ func StartIndex(mainDir string, db *sqlx.DB) (e error) {
 	for _, result := range results {
 		switch job := result.Get().(type) {
 		case FileIndexJob:
-			log.Printf("path: %s; hash: %s isDupe: %t\n", job.path, job.GetMd5(), job.isDupe())
-			if job.Success() && job.isDupe() {
+			log.Printf("[%s] %s\n", job.StatusString(), job.path)
+			if job.isDupe() {
 				duplicates = append(duplicates, job)
 			}
 		}
