@@ -2,6 +2,7 @@ package worker
 
 import (
 	"crypto/rand"
+	"fmt"
 	"log"
 	"math/big"
 	"testing"
@@ -29,6 +30,10 @@ type SleepyJob struct {
 
 func (job SleepyJob) Success() bool {
 	return job.success
+}
+
+func (job SleepyJob) String() string {
+	return fmt.Sprintf("%03d", job.id)
 }
 
 func (job SleepyJob) Get() interface{} {

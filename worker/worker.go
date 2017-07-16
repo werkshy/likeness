@@ -12,6 +12,7 @@ type Result interface {
 
 type Job interface {
 	Work(results chan Result)
+	String() string
 }
 
 type Producer interface {
@@ -37,7 +38,7 @@ func ProduceConsume(producer Producer) (results []Result) {
 		result := <-resultsChan
 		results = append(results, result)
 	}
-	log.Printf("%d workers complete\n", numQueued)
+	log.Printf("%d workers complete, we have %d results\n", numQueued, len(results))
 
 	return results
 }

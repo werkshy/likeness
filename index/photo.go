@@ -10,7 +10,7 @@ type Photo struct {
 	Path     string
 	Md5      []byte    `db:"checksum_value"`
 	FileDate time.Time `db:"file_date"`
-	ExifDate NullTime  `db:"exif_date"`
+	MetaDate NullTime  `db:"meta_date"`
 }
 
 func (photo Photo) String() string {
