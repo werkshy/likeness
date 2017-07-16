@@ -10,6 +10,14 @@ import (
 	"time"
 
 	"github.com/werkshy/likeness/worker"
+
+type Status int
+
+const (
+	Success   Status = iota
+	Skipped   Status = iota
+	Duplicate Status = iota
+	Failed    Status = iota
 )
 
 // curry a database connection into the jobs we build
@@ -26,11 +34,26 @@ type FileIndexJob struct {
 	path           string
 	md5            []byte
 	duplicatePhoto *Photo
-	success        bool
+	status         Status
 }
 
 func (result FileIndexJob) Success() bool {
-	return result.success
+	return (result.status == Success || result.status == Skipped)
+}
+
+func (result FileIndexJob) StatusString() string {
+	switch result.status {
+	case Success:
+		return "OK  "
+	case Skipped:
+		return "Skip"
+	case Failed:
+		return "Fail"
+	case Duplicate:
+		return "Dupe"
+	default:
+		return "????"
+	}
 }
 
 func (result FileIndexJob) Get() interface{} {
@@ -52,10 +75,10 @@ func (job *FileIndexJob) Work(results chan worker.Result) {
 		job.whenPhotoDoesNotExist(results)
 	case err != nil:
 		log.Printf("Error: Failed to lookup path: %s\n", err)
-		job.success = false
+		job.status = Failed
 	default:
 		log.Printf("File is already in DB at %s\n", found.Path)
-		job.success = true
+		job.status = Skipped
 	}
 	// When the photo already exists in the DB, let's do nothing for now.
 
@@ -80,14 +103,14 @@ func (job *FileIndexJob) whenPhotoDoesNotExist(results chan worker.Result) {
 		dupe, err := job.FindPhotoByMd5(job.md5)
 		if err == nil {
 			job.duplicatePhoto = &dupe
-			job.success = true
+			job.status = Duplicate
 		} else {
 			log.Printf("Failed to find the duplicate for %s\n", photo)
-			job.success = false
+			job.status = Failed
 		}
 	case err != nil:
 		log.Fatalf("Failed to insert: %s\n", err)
-		job.success = false
+		job.status = Failed
 	}
 
 	results <- job
