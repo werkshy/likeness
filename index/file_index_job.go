@@ -7,9 +7,9 @@ import (
 	"io"
 	"log"
 	"os"
-	"time"
 
 	"github.com/werkshy/likeness/worker"
+)
 
 type Status int
 
@@ -72,7 +72,7 @@ func (job *FileIndexJob) Work(results chan worker.Result) {
 	found, err := job.FindPhotoByPath(job.path)
 	switch {
 	case err == sql.ErrNoRows:
-		job.whenPhotoDoesNotExist(results)
+		job.whenPhotoDoesNotExist()
 	case err != nil:
 		log.Printf("Error: Failed to lookup path: %s\n", err)
 		job.status = Failed
@@ -80,13 +80,16 @@ func (job *FileIndexJob) Work(results chan worker.Result) {
 		log.Printf("File is already in DB at %s\n", found.Path)
 		job.status = Skipped
 	}
-	// When the photo already exists in the DB, let's do nothing for now.
 
 	results <- job
 }
 
-func (job *FileIndexJob) whenPhotoDoesNotExist(results chan worker.Result) {
-	log.Printf("Hashing %s\n", job.path)
+func (job *FileIndexJob) String() (s string) {
+	s = fmt.Sprintf("Job %d", job.id)
+	return
+}
+
+func (job *FileIndexJob) whenPhotoDoesNotExist() {
 	job.md5 = fileHash(job.path)
 	log.Printf("%s: %s\n", job.GetMd5(), job.path)
 
@@ -95,7 +98,8 @@ func (job *FileIndexJob) whenPhotoDoesNotExist(results chan worker.Result) {
 	photo := Photo{
 		Path:     job.path,
 		Md5:      job.md5,
-		FileDate: time.Now(), // FIXME
+		FileDate: FileDate(job.path),
+		MetaDate: MetaDate(job.path),
 	}
 	err := job.InsertPhoto(photo)
 	switch {
@@ -112,8 +116,6 @@ func (job *FileIndexJob) whenPhotoDoesNotExist(results chan worker.Result) {
 		log.Fatalf("Failed to insert: %s\n", err)
 		job.status = Failed
 	}
-
-	results <- job
 }
 
 func fileHash(path string) []byte {

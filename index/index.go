@@ -29,17 +29,18 @@ func StartIndex(mainDir string, db *sqlx.DB) (e error) {
 	for _, result := range results {
 		switch job := result.Get().(type) {
 		case FileIndexJob:
-			log.Printf("[%s] %s\n", job.StatusString(), job.path)
+			log.Printf("%02d [%s] %s\n", job.id, job.StatusString(), job.path)
 			if job.isDupe() {
 				duplicates = append(duplicates, job)
 			}
 		}
 	}
 
+	fmt.Printf("Found %d dupes\n", len(duplicates))
+
 	for _, job := range duplicates {
 		fmt.Printf("%s is a duplicate of %s\n", job.path, job.duplicatePhoto.Path)
 	}
-	fmt.Printf("Found %d dupes\n", len(duplicates))
 
 	return e
 }

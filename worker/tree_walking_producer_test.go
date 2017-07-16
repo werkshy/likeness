@@ -46,6 +46,10 @@ type dummyJob struct {
 func (job dummyJob) Work(chan Result) {
 }
 
+func (job dummyJob) String() string {
+	return ""
+}
+
 func jobBuilder(path string, info os.FileInfo, i int) Job {
 	return dummyJob{}
 }

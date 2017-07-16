@@ -31,7 +31,7 @@ func NewDbStore(db *sqlx.DB) Store {
 
 func (store DbStore) FindPhotoByMd5(md5 []byte) (photo Photo, err error) {
 	selectSql := `
-		SELECT id, path, checksum_value, file_date, exif_date
+		SELECT id, path, checksum_value, file_date, meta_date
 		FROM photos
 		WHERE checksum_type = 'md5' AND checksum_value = $1`
 
@@ -42,7 +42,7 @@ func (store DbStore) FindPhotoByMd5(md5 []byte) (photo Photo, err error) {
 
 func (store DbStore) FindPhotoByPath(path string) (photo Photo, err error) {
 	selectSql := `
-		SELECT id, path, checksum_value, file_date, exif_date
+		SELECT id, path, checksum_value, file_date, meta_date
 		FROM photos
 		WHERE path = $1`
 
@@ -53,7 +53,7 @@ func (store DbStore) FindPhotoByPath(path string) (photo Photo, err error) {
 
 func (store DbStore) FindPhotoByPathOrMd5(path string, md5 []byte) (photo Photo, err error) {
 	selectSql := `
-		SELECT id, path, checksum_value, file_date, exif_date
+		SELECT id, path, checksum_value, file_date, meta_date
 		FROM photos
 		WHERE path = $1
 		OR checksum_type = 'md5' AND checksum_value = $2`
@@ -66,11 +66,11 @@ func (store DbStore) FindPhotoByPathOrMd5(path string, md5 []byte) (photo Photo,
 func (store DbStore) InsertPhoto(photo Photo) (err error) {
 	// ON CONFLICT clause requires Postgres >= 9.5
 	insertSql := `
-		INSERT INTO photos (path, file_date, checksum_type, checksum_value)
-		VALUES ($1, NOW(), 'md5', $2)
+		INSERT INTO photos (path, meta_date, file_date, checksum_type, checksum_value)
+		VALUES ($1, $2, $3, 'md5', $4)
 		ON CONFLICT (checksum_type, checksum_value) DO NOTHING
 		RETURNING id`
-	row := store.QueryRow(insertSql, photo.Path, photo.Md5)
+	row := store.QueryRow(insertSql, photo.Path, photo.MetaDate, photo.FileDate, photo.Md5)
 
 	var insertedId int64
 	err = row.Scan(&insertedId)
