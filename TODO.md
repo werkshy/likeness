@@ -15,7 +15,7 @@ TODO
     - [x] File date
     - [x] exif date
     - [x] mp4 date
-    - [ ] .MOV date
+    - [x] mov date
 - [ ] Handle dupes (VERY careful deletion..)
       - which one to delete? There's one that's not in the DB. Should we assume that whatever we are indexing is somewhat reasonably laid out?
       - Should we add '--delete-dupes' and '--move-existing' config options for 'index' command?
@@ -41,3 +41,4 @@ TODO
 ## Advanced Dupe Detection
 
 - [ ] File date or Exif date is identical - build a web view with possible dupes and the ability to delete one?
+- [ ] Use a bloom filter for detecting dupes (instead of hammering the DB index.)
