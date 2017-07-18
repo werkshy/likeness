@@ -8,6 +8,7 @@ import (
 const (
 	sampleJpg = "../samples/20130307_093723.jpg"
 	sampleMp4 = "../samples/20130302_104024.mp4"
+	sampleMov = "../samples/2013-09-05-180929.mov"
 )
 
 func TestFileDate(t *testing.T) {
@@ -35,6 +36,16 @@ func TestMp4Date(t *testing.T) {
 	expectedDate, _ := time.Parse(time.RFC3339, "2013-03-02T08:40:49Z")
 
 	metaDate := MetaDate(sampleMp4)
+
+	if !metaDate.Equal(expectedDate) {
+		t.Errorf("meta date is wrong: %s != %s\n", metaDate.Format(time.RFC3339), expectedDate)
+	}
+}
+
+func TestMovDate(t *testing.T) {
+	expectedDate, _ := time.Parse(time.RFC3339, "2013-09-05T18:57:29Z")
+
+	metaDate := MetaDate(sampleMov)
 
 	if !metaDate.Equal(expectedDate) {
 		t.Errorf("meta date is wrong: %s != %s\n", metaDate.Format(time.RFC3339), expectedDate)

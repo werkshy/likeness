@@ -4,12 +4,14 @@ import (
 	"log"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/Joe-xu/mp4parser"
 	"github.com/djherbis/times"
 	"github.com/rwcarlsen/goexif/exif"
 	"github.com/rwcarlsen/goexif/mknote"
+	mediainfo "github.com/zhulik/go_mediainfo"
 )
 
 // Retrieve the file modifcation (or birth time if available)
@@ -36,11 +38,13 @@ func FileDate(path string) (t time.Time) {
 // Aaaand move this to a different class
 
 func MetaDate(photoPath string) (maybeTime NullTime) {
-	switch path.Ext(photoPath) {
+	switch strings.ToLower(path.Ext(photoPath)) {
 	case ".jpg":
 		maybeTime = exifDate(photoPath)
 	case ".mp4":
 		maybeTime = mp4Date(photoPath)
+	case ".mov":
+		maybeTime = mediaInfoDate(photoPath)
 	default:
 		log.Printf("Don't know how to read metadata for %s\n", photoPath)
 	}
@@ -65,10 +69,8 @@ func exifDate(path string) (maybeTime NullTime) {
 		return
 	}
 
-	// TODO get camModel etc
-	//camModel, _ := x.Get(exif.Model) // normally, don't ignore errors!
-	//fmt.Println(camModel.StringVal())
-
+	// NOTE: exif dates don't contain timezone. This code converts to the local timezone
+	//       which is probably what we want anyway.
 	exifTime, err := exifData.DateTime()
 	if err == nil {
 		maybeTime.Time = exifTime
@@ -76,6 +78,35 @@ func exifDate(path string) (maybeTime NullTime) {
 	} else {
 		log.Printf("Couldn't read an exif date from from %s\n", path)
 	}
+	return
+}
+
+func mediaInfoDate(path string) (maybeTime NullTime) {
+	mi := mediainfo.NewMediaInfo()
+	err := mi.OpenFile(path)
+	defer mi.Close()
+	if err != nil {
+		log.Printf("Mediainfo: failed to parse the bytes")
+		return
+	}
+
+	encodedDateString := mi.Get("Encoded_Date")
+	if encodedDateString == "" {
+		log.Printf("Mediainfo: No Encoded_Date found\n")
+		return
+	}
+
+	format := "MST 2006-01-02 15:04:05"
+
+	encodedDate, err := time.Parse(format, encodedDateString)
+	if err != nil {
+		log.Printf("Mediainfo: couldn't parse %s : %s\n", encodedDateString, err)
+		return
+	}
+
+	maybeTime.Time = encodedDate
+	maybeTime.Valid = true
+
 	return
 }
 
